@@ -1,0 +1,1401 @@
+<!DOCTYPE html>
+<html lang="ro">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ROWMESH — Rețea LoRa pentru România</title>
+<link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Syne:wght@400;600;700;800&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --black: #050a05;
+    --darkest: #0a110a;
+    --dark: #0f1f0f;
+    --darkgreen: #1a3a1a;
+    --midgreen: #2d6a2d;
+    --green: #3d8b3d;
+    --lightgreen: #5cb85c;
+    --accent: #7fff7f;
+    --white: #f0fff0;
+    --gray: #8aaa8a;
+    --mono: 'Space Mono', monospace;
+    --sans: 'Syne', sans-serif;
+  }
+
+  *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+  html { scroll-behavior: smooth; }
+
+  body {
+    background: var(--black);
+    color: var(--white);
+    font-family: var(--sans);
+    overflow-x: hidden;
+    cursor: none;
+  }
+
+  /* Custom cursor */
+  .cursor {
+    width: 12px; height: 12px;
+    background: var(--accent);
+    border-radius: 50%;
+    position: fixed; pointer-events: none; z-index: 9999;
+    transform: translate(-50%,-50%);
+    transition: transform 0.1s, width 0.2s, height 0.2s;
+    mix-blend-mode: exclusion;
+  }
+  .cursor-ring {
+    width: 36px; height: 36px;
+    border: 1px solid var(--accent);
+    border-radius: 50%;
+    position: fixed; pointer-events: none; z-index: 9998;
+    transform: translate(-50%,-50%);
+    transition: transform 0.15s ease-out, width 0.3s, height 0.3s, opacity 0.3s;
+    opacity: 0.5;
+  }
+
+  /* NAV */
+  nav {
+    position: fixed; top: 0; left: 0; right: 0; z-index: 1000;
+    padding: 1.2rem 3rem;
+    display: flex; align-items: center; justify-content: space-between;
+    background: rgba(5,10,5,0.85);
+    backdrop-filter: blur(20px);
+    border-bottom: 1px solid rgba(61,139,61,0.2);
+  }
+  .nav-logo {
+    font-family: var(--mono);
+    font-size: 1.1rem;
+    color: var(--accent);
+    letter-spacing: 0.3em;
+    text-decoration: none;
+  }
+  .nav-logo span { color: var(--gray); }
+  .nav-links { display: flex; gap: 2.5rem; }
+  .nav-links a {
+    font-family: var(--mono);
+    font-size: 0.7rem;
+    letter-spacing: 0.15em;
+    color: var(--gray);
+    text-decoration: none;
+    text-transform: uppercase;
+    transition: color 0.3s;
+  }
+  .nav-links a:hover { color: var(--accent); }
+
+  /* HERO */
+  .hero {
+    min-height: 100vh;
+    display: flex; flex-direction: column;
+    justify-content: center; align-items: center;
+    text-align: center;
+    padding: 8rem 2rem 4rem;
+    position: relative;
+    overflow: hidden;
+  }
+  .hero-bg {
+    position: absolute; inset: 0;
+    background: radial-gradient(ellipse 80% 60% at 50% 40%, rgba(45,106,45,0.25) 0%, transparent 70%);
+    pointer-events: none;
+  }
+  .mesh-grid {
+    position: absolute; inset: 0;
+    background-image:
+      linear-gradient(rgba(61,139,61,0.06) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(61,139,61,0.06) 1px, transparent 1px);
+    background-size: 60px 60px;
+    pointer-events: none;
+  }
+  .signal-rings {
+    position: absolute; left: 50%; top: 50%;
+    transform: translate(-50%, -50%);
+    pointer-events: none;
+  }
+  .ring {
+    position: absolute;
+    border: 1px solid rgba(127,255,127,0.15);
+    border-radius: 50%;
+    left: 50%; top: 50%;
+    transform: translate(-50%,-50%);
+    animation: ripple 4s ease-out infinite;
+  }
+  .ring:nth-child(1) { width: 200px; height: 200px; animation-delay: 0s; }
+  .ring:nth-child(2) { width: 400px; height: 400px; animation-delay: 1s; }
+  .ring:nth-child(3) { width: 600px; height: 600px; animation-delay: 2s; }
+  .ring:nth-child(4) { width: 800px; height: 800px; animation-delay: 3s; }
+  @keyframes ripple {
+    0% { opacity: 0.5; transform: translate(-50%,-50%) scale(0.95); }
+    100% { opacity: 0; transform: translate(-50%,-50%) scale(1.05); }
+  }
+
+  .hero-tag {
+    font-family: var(--mono);
+    font-size: 0.7rem;
+    letter-spacing: 0.3em;
+    color: var(--lightgreen);
+    text-transform: uppercase;
+    margin-bottom: 1.5rem;
+    opacity: 0;
+    animation: fadeUp 0.8s 0.3s forwards;
+  }
+  .hero-title {
+    font-size: clamp(4rem, 12vw, 10rem);
+    font-weight: 800;
+    line-height: 0.9;
+    letter-spacing: -0.03em;
+    color: var(--white);
+    position: relative;
+    z-index: 1;
+    opacity: 0;
+    animation: fadeUp 0.8s 0.5s forwards;
+  }
+  .hero-title .green { color: var(--accent); }
+  .hero-subtitle {
+    margin-top: 2rem;
+    font-size: clamp(0.9rem, 2vw, 1.1rem);
+    color: var(--gray);
+    max-width: 560px;
+    line-height: 1.7;
+    font-weight: 400;
+    opacity: 0;
+    animation: fadeUp 0.8s 0.7s forwards;
+  }
+  .hero-cta {
+    margin-top: 3rem;
+    display: flex; gap: 1rem; flex-wrap: wrap; justify-content: center;
+    opacity: 0;
+    animation: fadeUp 0.8s 0.9s forwards;
+  }
+  .btn-primary {
+    padding: 0.9rem 2.5rem;
+    background: var(--accent);
+    color: var(--black);
+    font-family: var(--mono);
+    font-size: 0.75rem;
+    font-weight: 700;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    border: none;
+    cursor: none;
+    text-decoration: none;
+    transition: transform 0.2s, box-shadow 0.2s;
+    clip-path: polygon(0 0, calc(100% - 10px) 0, 100% 10px, 100% 100%, 10px 100%, 0 calc(100% - 10px));
+  }
+  .btn-primary:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 0 30px rgba(127,255,127,0.4);
+  }
+  .btn-outline {
+    padding: 0.9rem 2.5rem;
+    background: transparent;
+    color: var(--accent);
+    font-family: var(--mono);
+    font-size: 0.75rem;
+    font-weight: 700;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    border: 1px solid rgba(127,255,127,0.4);
+    cursor: none;
+    text-decoration: none;
+    transition: border-color 0.2s, background 0.2s;
+  }
+  .btn-outline:hover { border-color: var(--accent); background: rgba(127,255,127,0.05); }
+  }
+  @keyframes scrollDown {
+    0% { transform: scaleY(0); transform-origin: top; opacity: 1; }
+    50% { transform: scaleY(1); transform-origin: top; opacity: 1; }
+    51% { transform-origin: bottom; }
+    100% { transform: scaleY(0); transform-origin: bottom; opacity: 0; }
+  }
+   
+
+  @keyframes fadeUp {
+    from { opacity: 0; transform: translateY(30px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  /* STATS BAR */
+  .stats-bar {
+    background: var(--darkgreen);
+    border-top: 1px solid rgba(127,255,127,0.1);
+    border-bottom: 1px solid rgba(127,255,127,0.1);
+    padding: 1.5rem 3rem;
+    display: grid; grid-template-columns: repeat(4, 1fr);
+    gap: 1rem;
+  }
+  .stat-item { text-align: center; }
+  .stat-number {
+    font-family: var(--mono);
+    font-size: clamp(1.5rem, 3vw, 2.2rem);
+    font-weight: 700;
+    color: var(--accent);
+  }
+  .stat-label {
+    font-family: var(--mono);
+    font-size: 0.6rem;
+    letter-spacing: 0.15em;
+    color: var(--gray);
+    text-transform: uppercase;
+    margin-top: 0.3rem;
+  }
+
+  /* SECTIONS */
+  section { padding: 7rem 3rem; }
+
+  .section-tag {
+    font-family: var(--mono);
+    font-size: 0.65rem;
+    letter-spacing: 0.3em;
+    color: var(--lightgreen);
+    text-transform: uppercase;
+    margin-bottom: 1rem;
+  }
+  .section-title {
+    font-size: clamp(2rem, 5vw, 3.5rem);
+    font-weight: 800;
+    line-height: 1.1;
+    letter-spacing: -0.02em;
+    margin-bottom: 1.5rem;
+  }
+  .section-title .accent { color: var(--accent); }
+
+  /* ABOUT */
+  .about { max-width: 1400px; margin: 0 auto; }
+  .about-grid {
+    display: grid; grid-template-columns: 1fr 1fr;
+    gap: 5rem; align-items: center;
+    margin-top: 4rem;
+  }
+  .about-text p {
+    color: var(--gray);
+    line-height: 1.8;
+    margin-bottom: 1.5rem;
+    font-size: 1rem;
+  }
+  .about-text p strong { color: var(--white); }
+  .about-visual {
+    position: relative;
+    height: 400px;
+  }
+
+  /* Network animation */
+  .network-canvas {
+    width: 100%; height: 100%;
+    border: 1px solid rgba(127,255,127,0.15);
+    background: var(--darkest);
+    position: relative;
+    overflow: hidden;
+  }
+  .node {
+    position: absolute;
+    width: 12px; height: 12px;
+    background: var(--accent);
+    border-radius: 50%;
+    box-shadow: 0 0 15px var(--accent);
+    transform: translate(-50%,-50%);
+    animation: pulse 2s ease-in-out infinite;
+  }
+  .node::after {
+    content: '';
+    position: absolute;
+    inset: -6px;
+    border: 1px solid var(--accent);
+    border-radius: 50%;
+    animation: nodeRing 2s ease-out infinite;
+    opacity: 0;
+  }
+  @keyframes nodeRing {
+    0% { transform: scale(1); opacity: 0.8; }
+    100% { transform: scale(2.5); opacity: 0; }
+  }
+  @keyframes pulse {
+    0%, 100% { box-shadow: 0 0 10px var(--accent); }
+    50% { box-shadow: 0 0 25px var(--accent), 0 0 50px rgba(127,255,127,0.3); }
+  }
+  .node-label {
+    position: absolute;
+    top: 18px; left: 50%; transform: translateX(-50%);
+    font-family: var(--mono);
+    font-size: 0.55rem;
+    color: var(--lightgreen);
+    white-space: nowrap;
+  }
+  .connection {
+    position: absolute;
+    background: linear-gradient(90deg, transparent, rgba(127,255,127,0.3), transparent);
+    height: 1px;
+    transform-origin: left center;
+    animation: dataFlow 3s linear infinite;
+  }
+  @keyframes dataFlow {
+    0% { opacity: 0.2; }
+    50% { opacity: 0.7; }
+    100% { opacity: 0.2; }
+  }
+  .data-packet {
+    position: absolute;
+    width: 4px; height: 4px;
+    background: var(--accent);
+    border-radius: 50%;
+    box-shadow: 0 0 8px var(--accent);
+  }
+
+  /* FEATURES */
+  .features { background: var(--darkest); }
+  .features-inner { max-width: 1400px; margin: 0 auto; }
+  .features-grid {
+    display: grid; grid-template-columns: repeat(3, 1fr);
+    gap: 1.5px;
+    margin-top: 4rem;
+    border: 1.5px solid rgba(127,255,127,0.1);
+  }
+  .feature-card {
+    padding: 2.5rem;
+    background: var(--dark);
+    transition: background 0.3s;
+    position: relative;
+    overflow: hidden;
+  }
+  .feature-card::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 2px;
+    background: var(--accent);
+    transform: scaleX(0);
+    transform-origin: left;
+    transition: transform 0.4s;
+  }
+  .feature-card:hover::before { transform: scaleX(1); }
+  .feature-card:hover { background: var(--darkgreen); }
+  .feature-icon {
+    font-size: 2rem; margin-bottom: 1.5rem;
+    display: block;
+  }
+  .feature-title {
+    font-family: var(--mono);
+    font-size: 0.85rem;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--white);
+    margin-bottom: 0.8rem;
+  }
+  .feature-desc {
+    color: var(--gray);
+    font-size: 0.9rem;
+    line-height: 1.7;
+  }
+  .feature-badge {
+    display: inline-block;
+    margin-top: 1rem;
+    padding: 0.3rem 0.7rem;
+    background: rgba(127,255,127,0.1);
+    color: var(--accent);
+    font-family: var(--mono);
+    font-size: 0.6rem;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    border: 1px solid rgba(127,255,127,0.2);
+  }
+
+  /* RANGE CHART */
+  .chart-section { max-width: 1400px; margin: 0 auto; }
+  .chart-container {
+    margin-top: 4rem;
+    background: var(--darkest);
+    border: 1px solid rgba(127,255,127,0.1);
+    padding: 3rem;
+  }
+  .chart-title {
+    font-family: var(--mono);
+    font-size: 0.7rem;
+    letter-spacing: 0.2em;
+    color: var(--gray);
+    text-transform: uppercase;
+    margin-bottom: 3rem;
+    padding-bottom: 1rem;
+    border-bottom: 1px solid rgba(127,255,127,0.1);
+  }
+  .bar-chart { display: flex; flex-direction: column; gap: 1.5rem; }
+  .bar-row {
+    display: grid; grid-template-columns: 160px 1fr 80px;
+    align-items: center; gap: 1.5rem;
+  }
+  .bar-label {
+    font-family: var(--mono);
+    font-size: 0.7rem;
+    color: var(--gray);
+    text-align: right;
+  }
+  .bar-track {
+    height: 28px;
+    background: rgba(127,255,127,0.05);
+    position: relative;
+    overflow: hidden;
+    border: 1px solid rgba(127,255,127,0.1);
+  }
+  .bar-fill {
+    height: 100%;
+    background: linear-gradient(90deg, var(--darkgreen), var(--accent));
+    width: 0;
+    transition: width 1.5s cubic-bezier(0.4,0,0.2,1);
+    position: relative;
+  }
+  .bar-fill::after {
+    content: '';
+    position: absolute;
+    right: 0; top: 0; bottom: 0;
+    width: 2px;
+    background: white;
+    box-shadow: 0 0 8px white;
+  }
+  .bar-value {
+    font-family: var(--mono);
+    font-size: 0.75rem;
+    color: var(--accent);
+  }
+
+  /* HOW IT WORKS */
+  .how { background: var(--darkest); }
+  .how-inner { max-width: 1400px; margin: 0 auto; }
+  .steps {
+    display: grid; grid-template-columns: repeat(4,1fr);
+    gap: 0;
+    margin-top: 4rem;
+    position: relative;
+  }
+  .steps::before {
+    content: '';
+    position: absolute;
+    top: 24px; left: 12.5%; right: 12.5%;
+    height: 1px;
+    background: linear-gradient(90deg, transparent, var(--midgreen), var(--midgreen), var(--midgreen), transparent);
+  }
+  .step {
+    padding: 0 2rem;
+    text-align: center;
+  }
+  .step-num {
+    width: 48px; height: 48px;
+    border: 2px solid var(--midgreen);
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-family: var(--mono);
+    font-size: 0.8rem;
+    color: var(--accent);
+    background: var(--darkest);
+    margin: 0 auto 1.5rem;
+    position: relative; z-index: 1;
+    transition: border-color 0.3s, box-shadow 0.3s;
+  }
+  .step:hover .step-num {
+    border-color: var(--accent);
+    box-shadow: 0 0 20px rgba(127,255,127,0.3);
+  }
+  .step-title {
+    font-family: var(--mono);
+    font-size: 0.75rem;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--white);
+    margin-bottom: 0.8rem;
+  }
+  .step-desc { color: var(--gray); font-size: 0.85rem; line-height: 1.6; }
+
+  /* DEVICES */
+  .devices { max-width: 1400px; margin: 0 auto; }
+  .devices-grid {
+    display: grid; grid-template-columns: 1fr 1fr;
+    gap: 2rem;
+    margin-top: 4rem;
+  }
+  .device-card {
+    background: var(--darkest);
+    border: 1px solid rgba(127,255,127,0.1);
+    padding: 2.5rem;
+    position: relative;
+    overflow: hidden;
+    transition: border-color 0.3s, transform 0.3s;
+  }
+  .device-card:hover {
+    border-color: rgba(127,255,127,0.4);
+    transform: translateY(-4px);
+  }
+  .device-corner {
+    position: absolute;
+    top: 0; right: 0;
+    width: 60px; height: 60px;
+    background: linear-gradient(135deg, transparent 50%, rgba(127,255,127,0.1) 50%);
+  }
+  .device-name {
+    font-family: var(--mono);
+    font-size: 1.1rem;
+    color: var(--accent);
+    letter-spacing: 0.05em;
+    margin-bottom: 0.5rem;
+  }
+  .device-sub {
+    font-family: var(--mono);
+    font-size: 0.65rem;
+    letter-spacing: 0.2em;
+    color: var(--gray);
+    text-transform: uppercase;
+    margin-bottom: 2rem;
+  }
+  .device-specs { list-style: none; }
+  .device-specs li {
+    display: flex; gap: 1rem;
+    align-items: flex-start;
+    padding: 0.6rem 0;
+    border-bottom: 1px solid rgba(127,255,127,0.06);
+    font-size: 0.85rem;
+  }
+  .device-specs li:last-child { border-bottom: none; }
+  .spec-key {
+    font-family: var(--mono);
+    font-size: 0.65rem;
+    color: var(--gray);
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    min-width: 120px;
+    padding-top: 0.1rem;
+  }
+  .spec-val { color: var(--white); line-height: 1.5; }
+
+  /* INTERACTIVE MAP */
+  .coverage { background: var(--darkest); }
+  .coverage-inner { max-width: 1400px; margin: 0 auto; }
+  .map-container {
+    margin-top: 4rem;
+    background: var(--dark);
+    border: 1px solid rgba(127,255,127,0.1);
+    padding: 3rem;
+  }
+  .romania-map {
+    width: 100%;
+    max-width: 700px;
+    margin: 0 auto;
+    display: block;
+    position: relative;
+  }
+  .coverage-cards {
+    display: grid; grid-template-columns: repeat(3, 1fr);
+    gap: 1.5rem;
+    margin-top: 2rem;
+  }
+  .coverage-card {
+    background: rgba(127,255,127,0.04);
+    border: 1px solid rgba(127,255,127,0.1);
+    padding: 1.5rem;
+    text-align: center;
+    cursor: none;
+    transition: background 0.3s, border-color 0.3s;
+  }
+  .coverage-card:hover, .coverage-card.active {
+    background: rgba(127,255,127,0.1);
+    border-color: var(--accent);
+  }
+  .coverage-card-icon { font-size: 1.5rem; margin-bottom: 0.8rem; }
+  .coverage-card-title {
+    font-family: var(--mono);
+    font-size: 0.7rem;
+    letter-spacing: 0.1em;
+    color: var(--white);
+    text-transform: uppercase;
+    margin-bottom: 0.5rem;
+  }
+  .coverage-card-desc { color: var(--gray); font-size: 0.8rem; line-height: 1.5; }
+
+  /* SIGNAL METER */
+  .signal-demo {
+    margin-top: 3rem;
+    background: var(--darkest);
+    border: 1px solid rgba(127,255,127,0.1);
+    padding: 2.5rem;
+  }
+  .signal-title {
+    font-family: var(--mono);
+    font-size: 0.7rem;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: var(--gray);
+    margin-bottom: 2rem;
+    padding-bottom: 1rem;
+    border-bottom: 1px solid rgba(127,255,127,0.1);
+  }
+  .signal-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 3rem; }
+  .signal-meter { }
+  .signal-label {
+    font-family: var(--mono);
+    font-size: 0.65rem;
+    letter-spacing: 0.1em;
+    color: var(--gray);
+    text-transform: uppercase;
+    margin-bottom: 0.8rem;
+  }
+  .signal-bars {
+    display: flex; gap: 4px; align-items: flex-end; height: 50px;
+  }
+  .signal-bar {
+    flex: 1;
+    background: rgba(127,255,127,0.15);
+    border-radius: 2px 2px 0 0;
+    transition: background 0.5s;
+    position: relative;
+  }
+  .signal-bar.active { background: var(--accent); }
+
+  /* TERMINAL */
+  .terminal-section { max-width: 1400px; margin: 0 auto; }
+  .terminal {
+    margin-top: 4rem;
+    background: #030803;
+    border: 1px solid rgba(127,255,127,0.2);
+    border-radius: 0;
+    overflow: hidden;
+  }
+  .terminal-header {
+    background: var(--darkgreen);
+    padding: 0.8rem 1.5rem;
+    display: flex; align-items: center; gap: 0.8rem;
+    border-bottom: 1px solid rgba(127,255,127,0.2);
+  }
+  .terminal-dot {
+    width: 10px; height: 10px;
+    border-radius: 50%;
+  }
+  .terminal-dot.red { background: #ff5f57; }
+  .terminal-dot.yellow { background: #febc2e; }
+  .terminal-dot.green { background: #28c840; }
+  .terminal-title {
+    font-family: var(--mono);
+    font-size: 0.65rem;
+    letter-spacing: 0.1em;
+    color: var(--gray);
+    margin-left: 0.5rem;
+  }
+  .terminal-body {
+    padding: 2rem;
+    font-family: var(--mono);
+    font-size: 0.8rem;
+    line-height: 2;
+    min-height: 280px;
+  }
+  .t-line { display: block; }
+  .t-prompt { color: var(--lightgreen); }
+  .t-cmd { color: var(--white); }
+  .t-output { color: var(--gray); }
+  .t-success { color: var(--accent); }
+  .t-highlight { color: #7fffff; }
+  .t-cursor {
+    display: inline-block;
+    width: 8px; height: 14px;
+    background: var(--accent);
+    vertical-align: middle;
+    animation: blink 1s step-end infinite;
+  }
+  @keyframes blink { 0%,100% { opacity: 1; } 50% { opacity: 0; } }
+
+  /* CONCLUSION */
+  .conclusion {
+    background: var(--darkgreen);
+    border-top: 1px solid rgba(127,255,127,0.2);
+    border-bottom: 1px solid rgba(127,255,127,0.2);
+  }
+  .conclusion-inner {
+    max-width: 1400px; margin: 0 auto;
+    display: grid; grid-template-columns: 1fr 1fr;
+    gap: 5rem; align-items: center;
+  }
+  .conclusion-text p {
+    color: var(--gray);
+    line-height: 1.8; margin-bottom: 1rem;
+  }
+  .conclusion-text p strong { color: var(--white); }
+  .conclusion-list { list-style: none; margin-top: 1.5rem; }
+  .conclusion-list li {
+    display: flex; gap: 1rem;
+    padding: 0.8rem 0;
+    border-bottom: 1px solid rgba(127,255,127,0.1);
+    color: var(--gray);
+    font-size: 0.9rem;
+    align-items: center;
+  }
+  .conclusion-list li::before {
+    content: '▸';
+    color: var(--accent);
+    flex-shrink: 0;
+  }
+  .solar-widget {
+    background: var(--darkest);
+    border: 1px solid rgba(127,255,127,0.15);
+    padding: 2.5rem;
+  }
+  .battery-visual {
+    display: flex; flex-direction: column; gap: 1rem;
+  }
+  .battery-row {
+    display: flex; align-items: center; gap: 1rem;
+  }
+  .battery-label {
+    font-family: var(--mono);
+    font-size: 0.65rem;
+    color: var(--gray);
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    min-width: 90px;
+  }
+  .battery-bar-track {
+    flex: 1;
+    height: 20px;
+    background: rgba(127,255,127,0.06);
+    border: 1px solid rgba(127,255,127,0.15);
+    position: relative;
+  }
+  .battery-bar-fill {
+    height: 100%;
+    background: linear-gradient(90deg, var(--darkgreen), var(--accent));
+  }
+  .battery-pct {
+    font-family: var(--mono);
+    font-size: 0.7rem;
+    color: var(--accent);
+    min-width: 40px;
+    text-align: right;
+  }
+
+  /* FOOTER */
+  footer {
+    background: var(--darkest);
+    border-top: 1px solid rgba(127,255,127,0.1);
+    padding: 3rem;
+  }
+  .footer-inner {
+    max-width: 1400px; margin: 0 auto;
+    display: flex; justify-content: space-between; align-items: center;
+    flex-wrap: wrap; gap: 2rem;
+  }
+  .footer-logo {
+    font-family: var(--mono);
+    font-size: 1.2rem;
+    color: var(--accent);
+    letter-spacing: 0.3em;
+  }
+  .footer-links { display: flex; gap: 2rem; flex-wrap: wrap; }
+  .footer-links a {
+    font-family: var(--mono);
+    font-size: 0.65rem;
+    letter-spacing: 0.15em;
+    color: var(--gray);
+    text-decoration: none;
+    text-transform: uppercase;
+    transition: color 0.3s;
+  }
+  .footer-links a:hover { color: var(--accent); }
+  .footer-copy {
+    font-family: var(--mono);
+    font-size: 0.6rem;
+    color: rgba(138,170,138,0.4);
+    letter-spacing: 0.1em;
+  }
+
+  /* MOBILE */
+  @media (max-width: 900px) {
+    nav { padding: 1rem 1.5rem; }
+    .nav-links { display: none; }
+    section { padding: 5rem 1.5rem; }
+    .stats-bar { grid-template-columns: repeat(2,1fr); padding: 1.5rem; }
+    .about-grid { grid-template-columns: 1fr; gap: 3rem; }
+    .features-grid { grid-template-columns: 1fr; }
+    .steps { grid-template-columns: repeat(2,1fr); }
+    .steps::before { display: none; }
+    .devices-grid { grid-template-columns: 1fr; }
+    .coverage-cards { grid-template-columns: 1fr; }
+    .signal-grid { grid-template-columns: 1fr; }
+    .conclusion-inner { grid-template-columns: 1fr; }
+    .bar-row { grid-template-columns: 100px 1fr 60px; }
+    .footer-inner { flex-direction: column; text-align: center; }
+  }
+
+  /* Visibility animation trigger */
+  .reveal {
+    opacity: 0;
+    transform: translateY(40px);
+    transition: opacity 0.8s, transform 0.8s;
+  }
+  .reveal.visible {
+    opacity: 1;
+    transform: translateY(0);
+  }
+</style>
+</head>
+<body>
+
+<div class="cursor" id="cursor"></div>
+<div class="cursor-ring" id="cursorRing"></div>
+
+<nav>
+  <a href="#" class="nav-logo">ROW<span>MESH</span></a>
+  <div class="nav-links">
+    <a href="#despre">Despre</a>
+    <a href="#caracteristici">Caracteristici</a>
+    <a href="#dispozitive">Dispozitive</a>
+    <a href="#acoperire">Acoperire</a>
+    <a href="#concluzie">Concluzie</a>
+  </div>
+</nav>
+
+<!-- HERO -->
+<section class="hero" id="acasa">
+  <div class="hero-bg"></div>
+  <div class="mesh-grid"></div>
+  <div class="signal-rings">
+    <div class="ring"></div>
+    <div class="ring"></div>
+    <div class="ring"></div>
+    <div class="ring"></div>
+  </div>
+
+  <div class="hero-tag">Proiect Inovator România — Rețea LoRa Mesh</div>
+  <h1 class="hero-title"><span class="green">ROW</span>MESH</h1>
+  <p class="hero-subtitle">Comunicare fără semnal GSM, pe distanțe de sute de kilometri. O rețea rezistentă, ieftină și independentă pentru România.</p>
+  <div class="hero-cta">
+    <a href="#despre" class="btn-primary">Descoperă Proiectul</a>
+    <a href="#dispozitive" class="btn-outline">Vezi Dispozitivele</a>
+  </div>
+</section>
+
+<!-- STATS -->
+<div class="stats-bar">
+  <div class="stat-item">
+    <div class="stat-number" data-count="331">0</div>
+    <div class="stat-label">km — Record distanță</div>
+  </div>
+  <div class="stat-item">
+    <div class="stat-number" data-count="868">0</div>
+    <div class="stat-label">MHz — Frecvență LoRa</div>
+  </div>
+  <div class="stat-item">
+    <div class="stat-number" data-suffix="zile" data-count="5">0</div>
+    <div class="stat-label">Autonomie baterie</div>
+  </div>
+  <div class="stat-item">
+    <div class="stat-number" data-prefix="∞">∞</div>
+    <div class="stat-label">Noduri în rețea</div>
+  </div>
+</div>
+
+<!-- ABOUT -->
+<section id="despre">
+  <div class="about">
+    <div class="section-tag">// 01 — Despre Proiect</div>
+    <h2 class="section-title">Comunicare fără <span class="accent">limite</span></h2>
+    <div class="about-grid">
+      <div class="about-text reveal">
+        <p>ROWMESH este o rețea de comunicații de tip <strong>Mesh bazată pe tehnologia LoRa (Long Range)</strong>, concepută să funcționeze independent de infrastructura GSM. Proiectul utilizează două module avansate: <strong>Lilygo TTGO T-Beam Supreme</strong> și <strong>Lilygo TTGO T-Echo</strong>, echipate cu transceiver LoRa la 868 MHz.</p>
+        <p>Prin aplicația <strong>Meshtastic</strong>, dispozitivele comunică între ele direct de pe telefon, fără SIM card și fără internet. Mesajele pot fi <strong>publice sau private</strong>, iar locația fiecărui nod este vizibilă în timp real pe hartă.</p>
+        <p>Scopul proiectului este modernizarea telecomunicațiilor în <strong>comunități izolate, stații Salvamont</strong> și zone montane, acolo unde semnalul clasic lipsește sau este nesigur.</p>
+      </div>
+      <div class="about-visual reveal">
+        <div class="network-canvas" id="networkCanvas">
+          <!-- Nodes injected by JS -->
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- FEATURES -->
+<section class="features" id="caracteristici">
+  <div class="features-inner">
+    <div class="section-tag">// 02 — Caracteristici</div>
+    <h2 class="section-title">De ce <span class="accent">ROWMESH?</span></h2>
+    <div class="features-grid">
+      <div class="feature-card reveal">
+        <span class="feature-icon">📡</span>
+        <div class="feature-title">Rețea Mesh Autonomă</div>
+        <p class="feature-desc">Fiecare dispozitiv devine automat repetor, extinzând aria de acoperire fără costuri suplimentare de licențiere a frecvențelor. Niciun nod central nu este necesar.</p>
+        <span class="feature-badge">Topologie Mesh</span>
+      </div>
+      <div class="feature-card reveal">
+        <span class="feature-icon">🏔️</span>
+        <div class="feature-title">Optimizat pentru Munți</div>
+        <p class="feature-desc">Cristalele TCXO (Temperature Compensated Crystal Oscillator) previn decalajul de frecvență în condiții de îngheț montan, asigurând stabilitatea legăturii radio.</p>
+        <span class="feature-badge">TCXO Stabilizat</span>
+      </div>
+      <div class="feature-card reveal">
+        <span class="feature-icon">☀️</span>
+        <div class="feature-title">Independent Energetic</div>
+        <p class="feature-desc">Poate fi conectat la un panou solar mobil prin USB-C, garantând funcționarea continuă chiar și în perioade cu radiație solară scăzută. Baterie 4-5 zile autonomie.</p>
+        <span class="feature-badge">Solar Ready</span>
+      </div>
+      <div class="feature-card reveal">
+        <span class="feature-icon">📍</span>
+        <div class="feature-title">GPS & Localizare</div>
+        <p class="feature-desc">Antenă GPS integrată afișează locația fiecărui dispozitiv în timp real. Funcție vitală pentru expedițiile montane și salvarea persoanelor în pericol.</p>
+        <span class="feature-badge">GPS Integrat</span>
+      </div>
+      <div class="feature-card reveal">
+        <span class="feature-icon">🌡️</span>
+        <div class="feature-title">Mini Stație Meteo</div>
+        <p class="feature-desc">Senzori pentru calitatea aerului, umiditate, fum și alte date de mediu, permite monitorizarea condițiilor fără a compromite etanșeitatea sistemului alimentat fotovoltaic.</p>
+        <span class="feature-badge">Multi-Sensor</span>
+      </div>
+      <div class="feature-card reveal">
+        <span class="feature-icon">🔐</span>
+        <div class="feature-title">Comunicare Privată</div>
+        <p class="feature-desc">Mesajele pot fi publice (vizibile în rețea) sau private (end-to-end encrypted). Conversații sigure, fără dependență de servere externe sau operatori telecom.</p>
+        <span class="feature-badge">E2E Encrypted</span>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- CHART -->
+<section>
+  <div class="chart-section">
+    <div class="section-tag">// 03 — Comparație Tehnologii</div>
+    <h2 class="section-title">ROWMESH vs <span class="accent">Alternativele</span></h2>
+    <div class="chart-container reveal" id="barChartSection">
+      <div class="chart-title">▸ Distanță maximă de comunicare (km) & Capabilități comparative</div>
+      <div class="bar-chart">
+        <div class="bar-row">
+          <div class="bar-label">LoRa Mesh (ROWMESH)</div>
+          <div class="bar-track"><div class="bar-fill" data-width="93" style="width:0%"></div></div>
+          <div class="bar-value">331 km</div>
+        </div>
+        <div class="bar-row">
+          <div class="bar-label">Radio VHF/UHF</div>
+          <div class="bar-track"><div class="bar-fill" data-width="30" style="width:0%; background: linear-gradient(90deg, #1a3a1a, #5cb85c);"></div></div>
+          <div class="bar-value">~80 km</div>
+        </div>
+        <div class="bar-row">
+          <div class="bar-label">Semnal GSM 4G</div>
+          <div class="bar-track"><div class="bar-fill" data-width="12" style="width:0%; background: linear-gradient(90deg, #1a1a3a, #5c5cb8);"></div></div>
+          <div class="bar-value">~30 km</div>
+        </div>
+        <div class="bar-row">
+          <div class="bar-label">WiFi Direct</div>
+          <div class="bar-track"><div class="bar-fill" data-width="2" style="width:0%; background: linear-gradient(90deg, #3a1a1a, #b85c5c);"></div></div>
+          <div class="bar-value">~0.1 km</div>
+        </div>
+        <div class="bar-row">
+          <div class="bar-label">Bluetooth 5.0</div>
+          <div class="bar-track"><div class="bar-fill" data-width="1" style="width:0%; background: linear-gradient(90deg, #2a1a3a, #8c5cb8);"></div></div>
+          <div class="bar-value">~0.3 km</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- HOW IT WORKS -->
+<section class="how" id="cum-functioneaza">
+  <div class="how-inner">
+    <div class="section-tag">// 04 — Cum Funcționează</div>
+    <h2 class="section-title">Protocolul <span class="accent">Mesh</span></h2>
+    <div class="steps">
+      <div class="step reveal">
+        <div class="step-num">01</div>
+        <div class="step-title">Nod Sursă</div>
+        <p class="step-desc">Un dispozitiv LoRa trimite un pachet radio la 868 MHz, codificat cu LoRa Spread Spectrum. Raza imediată: 10-50 km în teren deschis.</p>
+      </div>
+      <div class="step reveal">
+        <div class="step-num">02</div>
+        <div class="step-title">Retransmisie Automată</div>
+        <p class="step-desc">Fiecare nod intermediar recepționează și retransmite automat pachetul, extinzând rețeaua fără configurare manuală sau licențe suplimentare.</p>
+      </div>
+      <div class="step reveal">
+        <div class="step-num">03</div>
+        <div class="step-title">Rutare Inteligentă</div>
+        <p class="step-desc">Algoritmul Meshtastic determină cel mai eficient drum prin rețea, evitând bucle și optimizând consumul de energie al fiecărui nod.</p>
+      </div>
+      <div class="step reveal">
+        <div class="step-num">04</div>
+        <div class="step-title">Recepție & Afișare</div>
+        <p class="step-desc">Mesajul ajunge la destinatar prin Bluetooth 5.0 pe telefon, afișat în aplicația Meshtastic cu locația GPS a expeditorului.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- DEVICES -->
+<section id="dispozitive">
+  <div class="devices">
+    <div class="section-tag">// 05 — Dispozitive</div>
+    <h2 class="section-title">Hardware <span class="accent">LILYGO</span></h2>
+    <div class="devices-grid">
+      <div class="device-card reveal">
+        <div class="device-corner"></div>
+        <div class="device-name">T-BEAM SUPREME</div>
+        <div class="device-sub">Lilygo TTGO — Nod Principal</div>
+        <ul class="device-specs">
+          <li><span class="spec-key">Procesor</span><span class="spec-val">ESP32-S3 (dual-core 240 MHz)</span></li>
+          <li><span class="spec-key">Radio</span><span class="spec-val">LoRa SX1262 — 868/915 MHz</span></li>
+          <li><span class="spec-key">GPS</span><span class="spec-val">U-blox MAX-M10S / L76K</span></li>
+          <li><span class="spec-key">Display</span><span class="spec-val">OLED 1.3" SH1106 (128×64)</span></li>
+          <li><span class="spec-key">Senzori</span><span class="spec-val">BME280 (temp/umid/presiune), IMU 6-axe QMI8658, Magnetometru QMC6310</span></li>
+          <li><span class="spec-key">Conectivitate</span><span class="spec-val">WiFi, Bluetooth 5.0, USB-C</span></li>
+          <li><span class="spec-key">Stocare</span><span class="spec-val">TF Card (microSD)</span></li>
+          <li><span class="spec-key">Baterie</span><span class="spec-val">Li-ion 18650 (4-5 zile autonomie)</span></li>
+          <li><span class="spec-key">Carcasă</span><span class="spec-val">3D Print modulară, rezistentă la intemperii</span></li>
+        </ul>
+      </div>
+      <div class="device-card reveal">
+        <div class="device-corner"></div>
+        <div class="device-name">T-ECHO</div>
+        <div class="device-sub">Lilygo TTGO nRF52840 — Nod Portabil</div>
+        <ul class="device-specs">
+          <li><span class="spec-key">Procesor</span><span class="spec-val">Nordic nRF52840 (BLE 5.0 nativ)</span></li>
+          <li><span class="spec-key">Radio</span><span class="spec-val">LoRa SX1262 — 868/915 MHz</span></li>
+          <li><span class="spec-key">GPS</span><span class="spec-val">Modul GNSS dedicat</span></li>
+          <li><span class="spec-key">Display</span><span class="spec-val">E-Paper 1.54" (200×200) — consum 0 în standby</span></li>
+          <li><span class="spec-key">Conectivitate</span><span class="spec-val">NFC, Bluetooth 5.0, USB-C</span></li>
+          <li><span class="spec-key">Touch</span><span class="spec-val">Buton capacitiv + 2 butoane fizice</span></li>
+          <li><span class="spec-key">LED-uri</span><span class="spec-val">3× LED RGB pentru status</span></li>
+          <li><span class="spec-key">Autonomie</span><span class="spec-val">4-5 zile (E-Paper ultra-eficient)</span></li>
+          <li><span class="spec-key">Formfactor</span><span class="spec-val">Compact, ușor de transportat în rucsac</span></li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- COVERAGE -->
+<section class="coverage" id="acoperire">
+  <div class="coverage-inner">
+    <div class="section-tag">// 06 — Aplicații & Acoperire</div>
+    <h2 class="section-title">Unde se <span class="accent">Aplică</span></h2>
+    <div class="coverage-cards reveal">
+      <div class="coverage-card active" onclick="setActive(this)">
+        <div class="coverage-card-icon">🏔️</div>
+        <div class="coverage-card-title">Salvamont</div>
+        <p class="coverage-card-desc">Comunicare sigură între echipele de salvare montane, independent de GSM. Localizare GPS în timp real a persoanelor în pericol.</p>
+      </div>
+      <div class="coverage-card" onclick="setActive(this)">
+        <div class="coverage-card-icon">🏕️</div>
+        <div class="coverage-card-title">Drumeții & Expediții</div>
+        <p class="coverage-card-desc">Monitorizarea grupurilor de drumeți, comunicare pe trasee fără semnal, SOS rapid cu localizare precisă.</p>
+      </div>
+      <div class="coverage-card" onclick="setActive(this)">
+        <div class="coverage-card-icon">🏘️</div>
+        <div class="coverage-card-title">Smart Village</div>
+        <p class="coverage-card-desc">Rețea de comunicații pentru comunități rurale izolate. Alternativă ieftină la infrastructura telecom clasică.</p>
+      </div>
+    </div>
+
+    <div class="signal-demo reveal">
+      <div class="signal-title">▸ Simulator Putere Semnal — LoRa vs GSM</div>
+      <div class="signal-grid">
+        <div class="signal-meter">
+          <div class="signal-label">LoRa 868 MHz — Munte (2000m alt.)</div>
+          <div class="signal-bars" id="loraBars">
+            <div class="signal-bar active" style="height:20%"></div>
+            <div class="signal-bar active" style="height:35%"></div>
+            <div class="signal-bar active" style="height:50%"></div>
+            <div class="signal-bar active" style="height:65%"></div>
+            <div class="signal-bar active" style="height:80%"></div>
+            <div class="signal-bar active" style="height:90%"></div>
+            <div class="signal-bar active" style="height:100%"></div>
+          </div>
+          <div style="margin-top:0.5rem; font-family:var(--mono); font-size:0.65rem; color:var(--accent);">SEMNAL EXCELENT ✓</div>
+        </div>
+        <div class="signal-meter">
+          <div class="signal-label">GSM 4G — Aceeași locație montană</div>
+          <div class="signal-bars" id="gsmBars">
+            <div class="signal-bar active" style="height:20%; background:rgba(255,80,80,0.5)"></div>
+            <div class="signal-bar" style="height:35%; background:rgba(127,255,127,0.05);"></div>
+            <div class="signal-bar" style="height:50%"></div>
+            <div class="signal-bar" style="height:65%"></div>
+            <div class="signal-bar" style="height:80%"></div>
+            <div class="signal-bar" style="height:90%"></div>
+            <div class="signal-bar" style="height:100%"></div>
+          </div>
+          <div style="margin-top:0.5rem; font-family:var(--mono); font-size:0.65rem; color:#ff5f57;">FĂRĂ SEMNAL ✗</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- TERMINAL -->
+<section>
+  <div class="terminal-section">
+    <div class="section-tag">// 07 — Date Tehnice</div>
+    <h2 class="section-title">Specificații <span class="accent">Protocol</span></h2>
+    <div class="terminal reveal">
+      <div class="terminal-header">
+        <div class="terminal-dot red"></div>
+        <div class="terminal-dot yellow"></div>
+        <div class="terminal-dot green"></div>
+        <span class="terminal-title">rowmesh — meshtastic@romania ~ bash</span>
+      </div>
+      <div class="terminal-body" id="terminalBody">
+        <span class="t-line"><span class="t-prompt">rowmesh@romania:~$ </span><span class="t-cmd">meshtastic --info</span></span>
+        <span class="t-line t-output">Inițializare protocol LoRa Mesh...</span>
+        <span class="t-line"></span>
+        <span class="t-line t-success">╔══════════════════════════════════════╗</span>
+        <span class="t-line t-success">║       ROWMESH — STATUS REȚEA         ║</span>
+        <span class="t-line t-success">╚══════════════════════════════════════╝</span>
+        <span class="t-line"></span>
+        <span class="t-line"><span class="t-output">Frecvență:         </span><span class="t-highlight">868.0 MHz (banda EU ISM)</span></span>
+        <span class="t-line"><span class="t-output">Modulație:         </span><span class="t-highlight">LoRa Spread Spectrum SF7-SF12</span></span>
+        <span class="t-line"><span class="t-output">Bandwidth:         </span><span class="t-highlight">125 kHz</span></span>
+        <span class="t-line"><span class="t-output">Oscilator:         </span><span class="t-highlight">TCXO (temp. compensat) ✓</span></span>
+        <span class="t-line"><span class="t-output">Criptare:          </span><span class="t-highlight">AES-256 end-to-end</span></span>
+        <span class="t-line"><span class="t-output">Record distanță:   </span><span class="t-success">331 km ✓</span></span>
+        <span class="t-line"><span class="t-output">Noduri active:     </span><span class="t-highlight">Nelimitat (topologie mesh)</span></span>
+        <span class="t-line"><span class="t-output">Licență frecvență: </span><span class="t-success">GRATUITĂ (ISM band) ✓</span></span>
+        <span class="t-line"></span>
+        <span class="t-line t-prompt">rowmesh@romania:~$ <span class="t-cursor"></span></span>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- CONCLUSION -->
+<section class="conclusion" id="concluzie">
+  <div class="conclusion-inner">
+    <div class="conclusion-text reveal">
+      <div class="section-tag">// 08 — Concluzie</div>
+      <h2 class="section-title">O rețea care <span class="accent">salvează vieți</span></h2>
+      <p>ROWMESH demonstrează că se poate construi o rețea de comunicații <strong>rezilientă, ieftină și independentă</strong>. Nu doar că salvează vieți în zone montane prin funcția de localizare, dar oferă și o soluție de <strong>"smart village"</strong> pentru comunitățile izolate.</p>
+      <p>Costul redus al componentelor și posibilitatea de <strong>alimentare verde</strong> fac acest sistem scalabil și ușor de întreținut de oricine, oriunde în România.</p>
+      <ul class="conclusion-list">
+        <li>Independent de GSM, satelit sau internet</li>
+        <li>Funcționează în condiții extreme de mediu</li>
+        <li>Frecvența 868 MHz — fără licență necesară</li>
+        <li>Carcasă 3D modulară rezistentă la intemperii</li>
+        <li>Alimentare solară — zero costuri operaționale</li>
+        <li>Scalabil de la 2 noduri la rețele naționale</li>
+      </ul>
+    </div>
+    <div class="solar-widget reveal">
+      <div style="font-family:var(--mono); font-size:0.7rem; letter-spacing:0.2em; color:var(--gray); text-transform:uppercase; margin-bottom:2rem; padding-bottom:1rem; border-bottom:1px solid rgba(127,255,127,0.1);">▸ Autonomie Energetică</div>
+      <div class="battery-visual">
+        <div class="battery-row">
+          <div class="battery-label">T-Beam</div>
+          <div class="battery-bar-track"><div class="battery-bar-fill reveal-bar" data-w="85" style="width:0%"></div></div>
+          <div class="battery-pct">85%</div>
+        </div>
+        <div class="battery-row">
+          <div class="battery-label">T-Echo</div>
+          <div class="battery-bar-track"><div class="battery-bar-fill reveal-bar" data-w="92" style="width:0%; background: linear-gradient(90deg, var(--darkgreen), var(--lightgreen));"></div></div>
+          <div class="battery-pct">92%</div>
+        </div>
+        <div class="battery-row">
+          <div class="battery-label">Solar Input</div>
+          <div class="battery-bar-track"><div class="battery-bar-fill reveal-bar" data-w="100" style="width:0%; background: linear-gradient(90deg, #2d5a1a, #aaff7f);"></div></div>
+          <div class="battery-pct">100%</div>
+        </div>
+      </div>
+      <div style="margin-top:2rem; padding:1.5rem; background:rgba(127,255,127,0.05); border:1px solid rgba(127,255,127,0.1);">
+        <div style="font-family:var(--mono); font-size:0.65rem; color:var(--gray); margin-bottom:0.5rem;">COST ESTIMAT PER NOD</div>
+        <div style="font-size:2rem; font-weight:800; color:var(--accent); font-family:var(--mono);">~500 RON</div>
+        <div style="font-family:var(--mono); font-size:0.65rem; color:var(--gray); margin-top:0.3rem;">față de mii de EUR pentru soluții alternative</div>
+      </div>
+      <div style="margin-top:1rem; padding:1rem; background:rgba(127,255,127,0.04); border:1px solid rgba(127,255,127,0.08);">
+        <div style="font-family:var(--mono); font-size:0.65rem; color:var(--gray);">BIBLIOGRAFIE</div>
+        <div style="margin-top:0.5rem; display:flex; flex-direction:column; gap:0.3rem;">
+          <a href="https://meshtastic.org/" target="_blank" style="color:var(--lightgreen); font-family:var(--mono); font-size:0.7rem; text-decoration:none;">↗ meshtastic.org</a>
+          <a href="https://www.salvamontromania.ro/" target="_blank" style="color:var(--lightgreen); font-family:var(--mono); font-size:0.7rem; text-decoration:none;">↗ salvamontromania.ro</a>
+          <a href="https://lilygo.cc/" target="_blank" style="color:var(--lightgreen); font-family:var(--mono); font-size:0.7rem; text-decoration:none;">↗ lilygo.cc</a>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- FOOTER -->
+<footer>
+  <div class="footer-inner">
+    <div class="footer-logo">ROWMESH</div>
+    <div class="footer-links">
+      <a href="https://meshtastic.org/" target="_blank">Meshtastic</a>
+      <a href="https://www.salvamontromania.ro/" target="_blank">Salvamont România</a>
+      <a href="https://lilygo.cc/" target="_blank">LILYGO</a>
+    </div>
+    <div class="footer-copy">ROWMESH © 2026 — Proiect LoRa Mesh pentru România lukavieru80@gmail.com mateichirila30@gmail.com<div>
+  </div>
+</footer>
+
+<script>
+<!DOCTYPE html>
+<html>
+<head>
+  <style>
+    /* Force cursor to be hidden on the body */
+    body {
+      cursor: none;
+      margin: 0;
+      overflow-x: hidden;
+    }
+
+    #cursor {
+      width: 20px;
+      height: 20px;
+      background-color: black;
+      border-radius: 50%;
+      position: fixed;
+      top: 0;
+      left: 0;
+      pointer-events: none; /* Crucial: ensures clicks pass through */
+      z-index: 9999999;     /* Crucial: ensures it stays on top */
+      transform: translate(-50%, -50%);
+      will-change: transform; /* Improves performance */
+    }
+  </style>
+</head>
+<body>
+
+  <div id="cursor"></div>
+
+  <script>
+    const cursor = document.getElementById('cursor');
+
+    window.addEventListener('mousemove', (e) => {
+      // Use requestAnimationFrame for smoother movement
+      requestAnimationFrame(() => {
+        cursor.style.left = e.clientX + 'px';
+        cursor.style.top = e.clientY + 'px';
+      });
+    });
+  </script>
+</body>
+</html>
+
+// Animated counters
+function animateCount(el) {
+  const target = parseInt(el.dataset.count);
+  const suffix = el.dataset.suffix ? ' ' + el.dataset.suffix : '';
+  let start = 0;
+  const duration = 2000;
+  const startTime = performance.now();
+  const update = (now) => {
+    const elapsed = now - startTime;
+    const progress = Math.min(elapsed / duration, 1);
+    const eased = 1 - Math.pow(1 - progress, 3);
+    el.textContent = Math.round(start + (target - start) * eased) + suffix;
+    if (progress < 1) requestAnimationFrame(update);
+  };
+  requestAnimationFrame(update);
+}
+
+// Intersection Observer
+const observer = new IntersectionObserver((entries) => {
+  entries.forEach(entry => {
+    if (entry.isIntersecting) {
+      entry.target.classList.add('visible');
+    }
+  });
+}, { threshold: 0.1 });
+
+document.querySelectorAll('.reveal').forEach(el => observer.observe(el));
+
+// Stats counter observer
+const statsObserver = new IntersectionObserver((entries) => {
+  entries.forEach(entry => {
+    if (entry.isIntersecting) {
+      document.querySelectorAll('[data-count]').forEach(el => {
+        if (!el.dataset.prefix) animateCount(el);
+      });
+      statsObserver.disconnect();
+    }
+  });
+}, { threshold: 0.5 });
+statsObserver.observe(document.querySelector('.stats-bar'));
+
+// Bar chart animation
+const barObserver = new IntersectionObserver((entries) => {
+  entries.forEach(entry => {
+    if (entry.isIntersecting) {
+      document.querySelectorAll('.bar-fill').forEach((el, i) => {
+        setTimeout(() => {
+          el.style.width = el.dataset.width + '%';
+        }, i * 200);
+      });
+      barObserver.disconnect();
+    }
+  });
+}, { threshold: 0.3 });
+barObserver.observe(document.getElementById('barChartSection'));
+
+// Battery bars
+const battObserver = new IntersectionObserver((entries) => {
+  entries.forEach(entry => {
+    if (entry.isIntersecting) {
+      document.querySelectorAll('.reveal-bar').forEach((el, i) => {
+        setTimeout(() => { el.style.width = el.dataset.w + '%'; }, i * 300 + 400);
+      });
+      battObserver.disconnect();
+    }
+  });
+}, { threshold: 0.3 });
+battObserver.observe(document.querySelector('.solar-widget'));
+
+// Network canvas
+(function buildNetwork() {
+  const canvas = document.getElementById('networkCanvas');
+  if (!canvas) return;
+
+  const nodes = [
+    { x: 20, y: 30, label: 'Salvamont A' },
+    { x: 75, y: 20, label: 'Vârf Ceahlău' },
+    { x: 50, y: 55, label: 'Tabără' },
+    { x: 15, y: 70, label: 'Baza' },
+    { x: 80, y: 65, label: 'T-Echo' },
+    { x: 45, y: 85, label: 'Router' },
+  ];
+
+  const connections = [
+    [0,1],[0,2],[1,2],[1,4],[2,3],[2,4],[2,5],[3,5],[4,5]
+  ];
+
+  // SVG connections
+  const svgNS = 'http://www.w3.org/2000/svg';
+  const svg = document.createElementNS(svgNS, 'svg');
+  svg.style.cssText = 'position:absolute;inset:0;width:100%;height:100%;pointer-events:none;';
+  svg.setAttribute('viewBox', '0 0 100 100');
+  svg.setAttribute('preserveAspectRatio', 'none');
+
+  connections.forEach(([a, b]) => {
+    const line = document.createElementNS(svgNS, 'line');
+    line.setAttribute('x1', nodes[a].x); line.setAttribute('y1', nodes[a].y);
+    line.setAttribute('x2', nodes[b].x); line.setAttribute('y2', nodes[b].y);
+    line.setAttribute('stroke', 'rgba(127,255,127,0.25)');
+    line.setAttribute('stroke-width', '0.5');
+    line.style.animation = `dataFlow ${2 + Math.random()*2}s ease-in-out infinite`;
+    svg.appendChild(line);
+
+    // Animated packet
+    const circle = document.createElementNS(svgNS, 'circle');
+    circle.setAttribute('r', '1');
+    circle.setAttribute('fill', '#7fff7f');
+    const animEl = document.createElementNS(svgNS, 'animateMotion');
+    animEl.setAttribute('dur', (2 + Math.random()*3) + 's');
+    animEl.setAttribute('repeatCount', 'indefinite');
+    animEl.setAttribute('path', `M${nodes[a].x},${nodes[a].y} L${nodes[b].x},${nodes[b].y} L${nodes[a].x},${nodes[a].y}`);
+    circle.appendChild(animEl);
+    svg.appendChild(circle);
+  });
+
+  canvas.appendChild(svg);
+
+  nodes.forEach(n => {
+    const node = document.createElement('div');
+    node.className = 'node';
+    node.style.left = n.x + '%';
+    node.style.top = n.y + '%';
+    node.innerHTML = `<div class="node-label">${n.label}</div>`;
+    canvas.appendChild(node);
+  });
+})();
+
+// Coverage cards
+function setActive(el) {
+  document.querySelectorAll('.coverage-card').forEach(c => c.classList.remove('active'));
+  el.classList.add('active');
+}
+</script>
+
+</body>
+</html>
